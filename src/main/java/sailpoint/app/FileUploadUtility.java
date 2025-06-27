@@ -1,4 +1,4 @@
-package sailpoint.utils;
+package sailpoint.app;
 
 import okhttp3.ResponseBody;
 import org.apache.commons.collections4.CollectionUtils;
@@ -7,15 +7,23 @@ import org.apache.commons.lang3.StringUtils;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import sailpoint.object.Source;
+import sailpoint.object.config.Config;
 import sailpoint.service.SailPointService;
+import sailpoint.utils.ConfigUtils;
+import sailpoint.utils.EncryptionUtils;
+import sailpoint.utils.FileReadUtils;
+import sailpoint.utils.Logger;
+import sailpoint.utils.Reporter;
+import sailpoint.utils.SailPointUrl;
+import sailpoint.utils.Timer;
+
+import static sailpoint.app.FileUploadUtility.*;
 
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static sailpoint.utils.FileUploadUtility.*;
 
 @CommandLine.Command(
 		usageHelpAutoWidth = true,
@@ -39,23 +47,27 @@ public class FileUploadUtility implements Callable<Integer> {
 	/**
 	 * Metadata about the File Upload Utility
 	 */
-	public static final String ABOUT_DATE = "2024-09-10 16:15 CST";
-	public static final String ABOUT_VERSION = "4.1.0";
+	public static final String ABOUT_DATE = "2025-06-28 03:15 AWST";
+	public static final String ABOUT_VERSION = "4.1.1-RC";
 	public static final String ABOUT_LINK = "https://developer.sailpoint.com/discuss/t/file-upload-utility/18181";
 
 	/**
 	 * Command Line Parameters
 	 */
-	@Option( names = { "-u", "--url" }, required = true, description = "SailPoint API Gateway (e.g. https://tenant.api.identitynow.com)" )
+
+	@Option( names = { "-c", "--config-file" }, description = "Path to config JSON file." )
+	private String configFile = "";
+
+	@Option( names = { "-u", "--url" }, description = "SailPoint API Gateway (e.g. https://tenant.api.identitynow.com)" )
 	private String url = "";
 
-	@Option( names = { "-i", "--clientId" }, required = true, description = "SailPoint Client ID (PAT)" )
+	@Option( names = { "-i", "--clientId" }, description = "SailPoint Client ID (PAT)" )
 	private String clientId = "";
 
 	@Option( names = { "-s", "--clientSecret" }, description = "SailPoint Client Secret (PAT)", arity = "0..1", interactive = true )
 	private String clientSecret = "";
 
-	@Option( names = { "-f", "--file" }, required = true, description = "File or directories for bulk aggregation." )
+	@Option( names = { "-f", "--file" }, description = "File or directories for bulk aggregation." )
 	private List<File> files = null;
 
 	@Option( names = { "-d", "--disableOptimization" }, description = "Disable Optimization on Account Aggregation" )
@@ -118,7 +130,7 @@ public class FileUploadUtility implements Callable<Integer> {
 	public FileUploadUtility() {
 		super();
 
-		this.logger = new Logger();
+//		this.logger = new Logger();
 		this.reporter = new Reporter();
 	}
 	
@@ -168,7 +180,7 @@ public class FileUploadUtility implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		this.logger = new Logger( this.verbose );
+		this.logger = Logger.getInstance(this.verbose);
 
 		logger.info( "------------------------------------------------------------------------------------------------------------" );
 		logger.info( " SailPoint File Upload Utility" );
@@ -178,6 +190,56 @@ public class FileUploadUtility implements Callable<Integer> {
 		logger.info( String.format("%1$-20s %2$-30s ", " Docs:", ABOUT_LINK ) );
 		logger.info( "------------------------------------------------------------------------------------------------------------" );
 
+		/**
+		 * Load config file if it exists, if there are env's for the client Id and secret, these override the config file.
+		 */
+		if(!configFile.isEmpty()) {
+			logger.debug( " --config-file specified, attempting to load." );
+			Config config = ConfigUtils.ReadConfigFile(configFile);
+			Config encryptedConfig = ConfigUtils.EncodeSecrets(config);
+//			System.out.println(config.getTenant().getClientSecret());
+			ConfigUtils.WriteConfigFile(configFile, config);
+			
+			// Set the variables from the config file
+			this.clientId = config.getTenant().getClientId();
+//			this.clientSecret = config.getTenant().getClientSecret();
+			if (config.getTenant().getClientSecret().length() > 1 && !config.getTenant().getClientSecret().equalsIgnoreCase("env")) {
+				this.clientSecret = ConfigUtils.DecodeConfigItem(config, config.getTenant().getClientSecret().substring(2));
+			} else if (config.getTenant().getClientSecret().equalsIgnoreCase("env")) {
+				this.clientSecret = config.getTenant().getClientSecret();
+			}
+			
+//			System.out.println("DEC: " + this.clientSecret);
+			this.url = config.getTenant().getUrl();
+			
+			if (config.getProxy().isEnabled()) {
+				this.proxyHost = config.getProxy().getHost();
+				this.proxyPort = config.getProxy().getPort();
+				this.proxyUser = config.getProxy().getUser();
+				if (config.getProxy().getPassword().length() > 1 && !config.getProxy().getPassword().equalsIgnoreCase("env")) {
+					this.proxyPassword = ConfigUtils.DecodeConfigItem(config, config.getProxy().getPassword().substring(2));
+				} else if (config.getProxy().getPassword().equalsIgnoreCase("env")) {
+					this.clientSecret = config.getProxy().getPassword();
+				}
+			}
+			
+//			this.ex = config.getAggregation().getExtension();
+			this.disableOptimization = config.getAggregation().isDisableOptimization();
+			this.recursive = config.getAggregation().isRecursive();
+			this.simulate = config.getAggregation().isSimulate();
+			this.timeout = config.getAggregation().getTimeout();
+			this.objectType = config.getAggregation().getObjectType();
+			
+			if (config.getAggregation().getExtension().length > 0) {
+				this.fileExtensions = new ArrayList<String>(Arrays.asList(config.getAggregation().getExtension()));
+				
+			}
+			
+			if (config.getFiles().length > 0) {
+				this.files = FileReadUtils.loadFiles(config.getFiles());
+			}
+		}
+		
 		/*
 		 * Perform some basic validations of the parameters provided.  Picocli already does validation of required parameters.
 		 */
@@ -189,6 +251,18 @@ public class FileUploadUtility implements Callable<Integer> {
 		if( StringUtils.endsWithIgnoreCase( clientSecret, "env" ) ) {
 			logger.debug( " --clientSecret derived from $SAIL_CLIENT_SECRET" );
 			clientSecret = System.getenv( "SAIL_CLIENT_SECRET" );
+
+		}
+		
+		// Allow Proxy user and password to be set as environment variables for consistency
+		if( StringUtils.endsWithIgnoreCase( proxyUser, "env" ) ) {
+			logger.debug( " --proxyUser derived from $SAIL_PROXY_USER" );
+			clientId = System.getenv( "SAIL_PROXY_USER" );
+		}
+
+		if( StringUtils.endsWithIgnoreCase( proxyPassword, "env" ) ) {
+			logger.debug( " --proxyPassword derived from $SAIL_PROXY_PASS" );
+			clientSecret = System.getenv( "SAIL_PROXY_PASS" );
 
 		}
 
@@ -312,6 +386,8 @@ public class FileUploadUtility implements Callable<Integer> {
 		logger.info( "Analyzing " + objectType + " file: " + file.getName() );
 
 		final String sourceId = getSourceReferenceFromFile( file );
+		
+		System.out.println(sourceId);
 
 		if ( simulate ) {
 

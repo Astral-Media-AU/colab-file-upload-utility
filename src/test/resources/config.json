@@ -1,0 +1,31 @@
+{
+  "verbose": true,
+  "files": [
+    "/data/projects/sailpoint/c199f36176f4439d80b985f2c8fadcd2-RC.csv"
+  ],
+  "tenant": {
+    "url": "https://partner215.api.identitynow.com",
+    "clientId": "env",
+    "clientSecret": "env"
+  },
+  "proxy": {
+    "enabled": false,
+    "host": "",
+    "port": 1234,
+    "user": "",
+    "password": ""
+  },
+  "aggregation": {
+    "disableOptimization": false,
+    "objectType": "Account",
+    "recursive": false,
+    "simulate": false,
+    "timeout": 10000,
+    "extension": [
+      "csv",
+      "tsv"
+    ]
+  },
+  "ks": "Ep924opc0r4ZjZCCLk8tzw\u003d\u003d",
+  "iv": "Q6KEAaihs1oNAjqP"
+}
