@@ -1,8 +1,5 @@
 {
   "verbose": true,
-  "files": [
-    "/data/projects/sailpoint/c199f36176f4439d80b985f2c8fadcd2-RC.csv"
-  ],
   "tenant": {
     "url": "https://partner215.api.identitynow.com",
     "clientId": "env",
@@ -15,17 +12,27 @@
     "user": "",
     "password": ""
   },
-  "aggregation": {
-    "disableOptimization": false,
-    "objectType": "Account",
-    "recursive": false,
-    "simulate": false,
-    "timeout": 10000,
-    "extension": [
-      "csv",
-      "tsv"
-    ]
-  },
+  "aggregations": [
+    {
+      "sourceId": "c199f36176f4439d80b985f2c8fadcd2",
+      "disableOptimization": false,
+      "objectType": "Account",
+      "recursive": false,
+      "simulate": false,
+      "timeout": 10000,
+      "extensions": [
+        "csv",
+        "tsv"
+      ],
+      "enableFileJourney": true,
+      "structure": {
+        "in": "/data/projects/sailpoint/",
+        "stage": "/data/projects/sailpoint/stage",
+        "archive": "/data/projects/sailpoint/archive",
+        "error": "/data/projects/sailpoint/error"
+      }
+    }
+  ],
   "ks": "Ep924opc0r4ZjZCCLk8tzw\u003d\u003d",
   "iv": "Q6KEAaihs1oNAjqP"
 }

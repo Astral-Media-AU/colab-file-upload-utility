@@ -6,7 +6,7 @@ import java.util.List;
 
 import sailpoint.exception.FileReadException;
 
-public class FileReadUtils {
+public class FileManagementUtils {
 	private static Logger logger = Logger.getInstance();
 	public static List<File> loadFiles(String[] files) throws FileReadException {
 		logger.debug(String.format("loadFiles: Loading %s files...", files.length));
@@ -27,4 +27,6 @@ public class FileReadUtils {
 			return fileList;
 //		}
 	}
+	
+	
 }

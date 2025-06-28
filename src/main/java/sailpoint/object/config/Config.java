@@ -5,10 +5,9 @@ package sailpoint.object.config;
  */
 public class Config {
     private boolean verbose;
-    private String[] files;
     private ConfigTenant tenant;
     private ConfigProxy proxy;
-    private ConfigAggregation aggregation;
+    private ConfigAggregation[] aggregations;
     private String ks;
     private String iv;
     
@@ -18,12 +17,7 @@ public class Config {
     public void setVerbose(boolean verbose) {
         this.verbose = verbose;
     }
-    public String[] getFiles() {
-        return files;
-    }
-    public void setFiles(String[] files) {
-        this.files = files;
-    }
+
     public ConfigTenant getTenant() {
         return tenant;
     }
@@ -36,11 +30,11 @@ public class Config {
     public void setProxy(ConfigProxy proxy) {
         this.proxy = proxy;
     }
-    public ConfigAggregation getAggregation() {
-        return aggregation;
+    public ConfigAggregation[] getAggregations() {
+        return aggregations;
     }
-    public void setAggregation(ConfigAggregation aggregation) {
-        this.aggregation = aggregation;
+    public void setAggregations(ConfigAggregation[] aggregations) {
+        this.aggregations = aggregations;
     }
 	public String getKs() {
 		return ks;
@@ -54,6 +48,4 @@ public class Config {
 	public void setIv(String iv) {
 		this.iv = iv;
 	}
-
-    
 }

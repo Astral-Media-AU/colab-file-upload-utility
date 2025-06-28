@@ -8,10 +8,12 @@ import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import sailpoint.object.Source;
 import sailpoint.object.config.Config;
+import sailpoint.object.config.ConfigAggregation;
+import sailpoint.service.FileProcessorService;
 import sailpoint.service.SailPointService;
 import sailpoint.utils.ConfigUtils;
 import sailpoint.utils.EncryptionUtils;
-import sailpoint.utils.FileReadUtils;
+import sailpoint.utils.FileManagementUtils;
 import sailpoint.utils.Logger;
 import sailpoint.utils.Reporter;
 import sailpoint.utils.SailPointUrl;
@@ -25,23 +27,11 @@ import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@CommandLine.Command(
-		usageHelpAutoWidth = true,
-		name = "java -jar sailpoint-file-upload-utility.jar",
-		sortOptions = false,
-		headerHeading = "%nUsage:%n%n",
-		synopsisHeading = "%n",
-		descriptionHeading = "%nDescription:%n%n",
-		parameterListHeading = "%nParameters:%n",
-		optionListHeading = "%nOptions:%n",
-		header = "Perform bulk file aggregations to Identity Security Cloud.",
-		description = "Scans specified files and directories for files in bulk, to send to Identity Security Cloud for account or entitlement aggregation.  For more details see: " + ABOUT_LINK,
-		version = {
-		"SailPoint File Upload Utility " + ABOUT_VERSION,
-		"Build: " + ABOUT_DATE,
-		"Documentation: " + ABOUT_LINK,
-		"JVM: ${java.version} (${java.vendor} ${java.vm.name} ${java.vm.version})",
-		"OS: ${os.name} ${os.version} ${os.arch}"})
+@CommandLine.Command(usageHelpAutoWidth = true, name = "java -jar sailpoint-file-upload-utility.jar", sortOptions = false, headerHeading = "%nUsage:%n%n", synopsisHeading = "%n", descriptionHeading = "%nDescription:%n%n", parameterListHeading = "%nParameters:%n", optionListHeading = "%nOptions:%n", header = "Perform bulk file aggregations to Identity Security Cloud.", description = "Scans specified files and directories for files in bulk, to send to Identity Security Cloud for account or entitlement aggregation.  For more details see: "
+		+ ABOUT_LINK, version = { "SailPoint File Upload Utility " + ABOUT_VERSION, "Build: " + ABOUT_DATE,
+				"Documentation: " + ABOUT_LINK,
+				"JVM: ${java.version} (${java.vendor} ${java.vm.name} ${java.vm.version})",
+				"OS: ${os.name} ${os.version} ${os.arch}" })
 public class FileUploadUtility implements Callable<Integer> {
 
 	/**
@@ -55,58 +45,62 @@ public class FileUploadUtility implements Callable<Integer> {
 	 * Command Line Parameters
 	 */
 
-	@Option( names = { "-c", "--config-file" }, description = "Path to config JSON file." )
+	@Option(names = { "-c", "--config-file" }, description = "Path to config JSON file.")
 	private String configFile = "";
 
-	@Option( names = { "-u", "--url" }, description = "SailPoint API Gateway (e.g. https://tenant.api.identitynow.com)" )
+	@Option(names = { "-u", "--url" }, description = "SailPoint API Gateway (e.g. https://tenant.api.identitynow.com)")
 	private String url = "";
 
-	@Option( names = { "-i", "--clientId" }, description = "SailPoint Client ID (PAT)" )
+	@Option(names = { "-i", "--clientId" }, description = "SailPoint Client ID (PAT)")
 	private String clientId = "";
 
-	@Option( names = { "-s", "--clientSecret" }, description = "SailPoint Client Secret (PAT)", arity = "0..1", interactive = true )
+	@Option(names = { "-s",
+			"--clientSecret" }, description = "SailPoint Client Secret (PAT)", arity = "0..1", interactive = true)
 	private String clientSecret = "";
 
-	@Option( names = { "-f", "--file" }, description = "File or directories for bulk aggregation." )
+	@Option(names = { "-f", "--file" }, description = "File or directories for bulk aggregation.")
 	private List<File> files = null;
 
-	@Option( names = { "-d", "--disableOptimization" }, description = "Disable Optimization on Account Aggregation" )
+	@Option(names = { "-d", "--disableOptimization" }, description = "Disable Optimization on Account Aggregation")
 	private boolean disableOptimization = false;
 
-	@Option( names = { "-o", "--objectType" }, description = "File Type; Account or Entitlement Schema. Default: Account" )
+	@Option(names = { "-o",
+			"--objectType" }, description = "File Type; Account or Entitlement Schema. Default: Account")
 	private String objectType = DEFAULT_ACCOUNT_AGGREGATION;
 
-	@Option( names = { "-R", "--recursive" }, description = "Recursively search directories" )
+	@Option(names = { "-R", "--recursive" }, description = "Recursively search directories")
 	private boolean recursive = false;
 
-	@Option( names = { "-S", "--simulate" }, description = "Simulation Mode.  Scans for files but does not aggregate." )
+	@Option(names = { "-S", "--simulate" }, description = "Simulation Mode.  Scans for files but does not aggregate.")
 	private boolean simulate = false;
 
-	@Option( names = { "-t", "--timeout" }, description = "Timeout (in milliseconds). Default: 10000 (10s)" )
-	private Integer timeout = 10000;  // Default is 10s
+	@Option(names = { "-t", "--timeout" }, description = "Timeout (in milliseconds). Default: 10000 (10s)")
+	private Integer timeout = 10000; // Default is 10s
 
-	@Option( names = { "-x", "--extension" }, description = "File extensions to search (for directories only).  Default: csv" )
-	private List<String> fileExtensions = Arrays.asList( "csv" );
+	@Option(names = { "-x",
+			"--extension" }, description = "File extensions to search (for directories only).  Default: csv")
+	private List<String> fileExtensions = Arrays.asList("csv");
 
-	@Option( names = { "-v", "--verbose" }, description = "Verbose logging. Default: false" )
+	@Option(names = { "-v", "--verbose" }, description = "Verbose logging. Default: false")
 	private boolean verbose = false;
 
-	@Option( names = { "-H", "--proxyHost" }, description = "Proxy Host" )
+	@Option(names = { "-H", "--proxyHost" }, description = "Proxy Host")
 	private String proxyHost;
 
-	@Option( names = { "-P", "--proxyPort" }, description = "Proxy Post" )
+	@Option(names = { "-P", "--proxyPort" }, description = "Proxy Post")
 	private int proxyPort = -1;
 
-	@Option( names = { "-U", "--proxyUser" }, description = "Proxy User; Used for authenticated proxies" )
+	@Option(names = { "-U", "--proxyUser" }, description = "Proxy User; Used for authenticated proxies")
 	private String proxyUser = null;
 
-	@Option( names = { "-W", "--proxyPassword" }, description = "Proxy Password; Used for authenticated proxies", arity = "0..1", interactive = true )
+	@Option(names = { "-W",
+			"--proxyPassword" }, description = "Proxy Password; Used for authenticated proxies", arity = "0..1", interactive = true)
 	private String proxyPassword = null;
 
 	@Option(names = { "-V", "--version" }, versionHelp = true, description = "Displays the current version.")
 	boolean versionRequested;
 
-	@Option(names = {"-h", "--help"}, usageHelp = true, description = "Display help.")
+	@Option(names = { "-h", "--help" }, usageHelp = true, description = "Display help.")
 	boolean helpRequested;
 
 	/**
@@ -118,12 +112,7 @@ public class FileUploadUtility implements Callable<Integer> {
 
 	private SailPointService sailPointService;
 
-	/*
-	 * This sourceReferenceMap is used to map old source IDs to new source IDs.
-	 * Keyed by old source IDs; Values are new source IDs
-	 * 184744 : 2c918087701c40cf01701dfdf2c61e2a
-	 */
-	private Map<String, String> sourceReferenceMap = null;
+	private FileProcessorService fileProcessorService;
 
 	public static final String DEFAULT_ACCOUNT_AGGREGATION = "account";
 
@@ -133,47 +122,47 @@ public class FileUploadUtility implements Callable<Integer> {
 //		this.logger = new Logger();
 		this.reporter = new Reporter();
 	}
-	
-	public static void main( String[] args ) throws Exception {
 
-		CommandLine commandLine = new CommandLine( new FileUploadUtility() );
+	public static void main(String[] args) throws Exception {
+
+		CommandLine commandLine = new CommandLine(new FileUploadUtility());
 
 		try {
 
-			commandLine.parseArgs( args );
+			commandLine.parseArgs(args);
 
-			FileUploadUtility fileUploadUtility = commandLine.populateCommand( new FileUploadUtility(), args );
+			FileUploadUtility fileUploadUtility = commandLine.populateCommand(new FileUploadUtility(), args);
 
-			if( fileUploadUtility.helpRequested || args == null || args.length == 0 ) {
-				commandLine.usage( System.out );
+			if (fileUploadUtility.helpRequested || args == null || args.length == 0) {
+				commandLine.usage(System.out);
 				return;
 			}
 
-			if( fileUploadUtility.versionRequested ) {
-				commandLine.printVersionHelp( System.out );
+			if (fileUploadUtility.versionRequested) {
+				commandLine.printVersionHelp(System.out);
 				return;
 			}
 
-			System.exit( fileUploadUtility.call() );
+			System.exit(fileUploadUtility.call());
 
-		} catch ( UnsupportedClassVersionError ue ) {
+		} catch (UnsupportedClassVersionError ue) {
 
-			System.out.println( "Unsupported version of Java: Please upgrade to JDK 11 or higher." );
-			System.exit( 1 );
+			System.out.println("Unsupported version of Java: Please upgrade to JDK 11 or higher.");
+			System.exit(1);
 
-		} catch ( RuntimeException rte ) {
+		} catch (RuntimeException rte) {
 
-			System.out.println( rte.getMessage() );
-			System.exit( 1 );
+			System.out.println(rte.getMessage());
+			System.exit(1);
 
-		} catch ( Exception e ) {
+		} catch (Exception e) {
 
-			if( args == null || args.length == 0 )
-				System.out.println( "No command arguments given.  Please provide arguments as indicated by the usage." );
+			if (args == null || args.length == 0)
+				System.out.println("No command arguments given.  Please provide arguments as indicated by the usage.");
 			else
-				System.out.println( "Invalid parameters given. Args [" + String.join( " ", args ) + "]." );
+				System.out.println("Invalid parameters given. Args [" + String.join(" ", args) + "].");
 
-			commandLine.usage( System.out );
+			commandLine.usage(System.out);
 		}
 	}
 
@@ -182,376 +171,179 @@ public class FileUploadUtility implements Callable<Integer> {
 
 		this.logger = Logger.getInstance(this.verbose);
 
-		logger.info( "------------------------------------------------------------------------------------------------------------" );
-		logger.info( " SailPoint File Upload Utility" );
-		logger.info( "------------------------------------------------------------------------------------------------------------" );
-		logger.info( String.format("%1$-20s %2$-30s ", " Version:", ABOUT_VERSION ) );
-		logger.info( String.format("%1$-20s %2$-30s ", " Date:", ABOUT_DATE ) );
-		logger.info( String.format("%1$-20s %2$-30s ", " Docs:", ABOUT_LINK ) );
-		logger.info( "------------------------------------------------------------------------------------------------------------" );
+		Config config = null;
+
+		logger.info(
+				"------------------------------------------------------------------------------------------------------------");
+		logger.info(" SailPoint File Upload Utility");
+		logger.info(
+				"------------------------------------------------------------------------------------------------------------");
+		logger.info(String.format("%1$-20s %2$-30s ", " Version:", ABOUT_VERSION));
+		logger.info(String.format("%1$-20s %2$-30s ", " Date:", ABOUT_DATE));
+		logger.info(String.format("%1$-20s %2$-30s ", " Docs:", ABOUT_LINK));
+		logger.info(
+				"------------------------------------------------------------------------------------------------------------");
 
 		/**
-		 * Load config file if it exists, if there are env's for the client Id and secret, these override the config file.
+		 * Load config file if it exists, if there are env's for the client Id and
+		 * secret, these override the config file.
 		 */
-		if(!configFile.isEmpty()) {
-			logger.debug( " --config-file specified, attempting to load." );
-			Config config = ConfigUtils.ReadConfigFile(configFile);
-			Config encryptedConfig = ConfigUtils.EncodeSecrets(config);
+		if (!configFile.isEmpty()) {
+			logger.debug(" --config-file specified, attempting to load.");
+			config = ConfigUtils.ReadConfigFile(configFile);
+			ConfigUtils.EncodeSecrets(config);
 //			System.out.println(config.getTenant().getClientSecret());
 			ConfigUtils.WriteConfigFile(configFile, config);
-			
+
 			// Set the variables from the config file
 			this.clientId = config.getTenant().getClientId();
 //			this.clientSecret = config.getTenant().getClientSecret();
-			if (config.getTenant().getClientSecret().length() > 1 && !config.getTenant().getClientSecret().equalsIgnoreCase("env")) {
-				this.clientSecret = ConfigUtils.DecodeConfigItem(config, config.getTenant().getClientSecret().substring(2));
+			if (config.getTenant().getClientSecret().length() > 1
+					&& !config.getTenant().getClientSecret().equalsIgnoreCase("env")) {
+				this.clientSecret = ConfigUtils.DecodeConfigItem(config,
+						config.getTenant().getClientSecret().substring(2));
 			} else if (config.getTenant().getClientSecret().equalsIgnoreCase("env")) {
 				this.clientSecret = config.getTenant().getClientSecret();
 			}
-			
+
 //			System.out.println("DEC: " + this.clientSecret);
 			this.url = config.getTenant().getUrl();
-			
+
 			if (config.getProxy().isEnabled()) {
 				this.proxyHost = config.getProxy().getHost();
 				this.proxyPort = config.getProxy().getPort();
 				this.proxyUser = config.getProxy().getUser();
-				if (config.getProxy().getPassword().length() > 1 && !config.getProxy().getPassword().equalsIgnoreCase("env")) {
-					this.proxyPassword = ConfigUtils.DecodeConfigItem(config, config.getProxy().getPassword().substring(2));
+				if (config.getProxy().getPassword().length() > 1
+						&& !config.getProxy().getPassword().equalsIgnoreCase("env")) {
+					this.proxyPassword = ConfigUtils.DecodeConfigItem(config,
+							config.getProxy().getPassword().substring(2));
 				} else if (config.getProxy().getPassword().equalsIgnoreCase("env")) {
 					this.clientSecret = config.getProxy().getPassword();
 				}
 			}
-			
-//			this.ex = config.getAggregation().getExtension();
-			this.disableOptimization = config.getAggregation().isDisableOptimization();
-			this.recursive = config.getAggregation().isRecursive();
-			this.simulate = config.getAggregation().isSimulate();
-			this.timeout = config.getAggregation().getTimeout();
-			this.objectType = config.getAggregation().getObjectType();
-			
-			if (config.getAggregation().getExtension().length > 0) {
-				this.fileExtensions = new ArrayList<String>(Arrays.asList(config.getAggregation().getExtension()));
-				
-			}
-			
-			if (config.getFiles().length > 0) {
-				this.files = FileReadUtils.loadFiles(config.getFiles());
-			}
 		}
-		
-		/*
-		 * Perform some basic validations of the parameters provided.  Picocli already does validation of required parameters.
-		 */
-		if( StringUtils.endsWithIgnoreCase( clientId, "env" ) ) {
-			logger.debug( " --clientId derived from $SAIL_CLIENT_ID" );
-			clientId = System.getenv( "SAIL_CLIENT_ID" );
-		}
-
-		if( StringUtils.endsWithIgnoreCase( clientSecret, "env" ) ) {
-			logger.debug( " --clientSecret derived from $SAIL_CLIENT_SECRET" );
-			clientSecret = System.getenv( "SAIL_CLIENT_SECRET" );
-
-		}
-		
-		// Allow Proxy user and password to be set as environment variables for consistency
-		if( StringUtils.endsWithIgnoreCase( proxyUser, "env" ) ) {
-			logger.debug( " --proxyUser derived from $SAIL_PROXY_USER" );
-			clientId = System.getenv( "SAIL_PROXY_USER" );
-		}
-
-		if( StringUtils.endsWithIgnoreCase( proxyPassword, "env" ) ) {
-			logger.debug( " --proxyPassword derived from $SAIL_PROXY_PASS" );
-			clientSecret = System.getenv( "SAIL_PROXY_PASS" );
-
-		}
-
-		if ( !StringUtils.startsWithIgnoreCase( url, "https://" ) )
-			throw new RuntimeException( "Usage: The provided --url parameter must begin with 'https://'" );
-
-		if ( !SailPointUrl.isValid( url ) )
-			throw new RuntimeException( "Usage: The provided --url parameter must be a valid API URL: \n" + SailPointUrl.getDisplayableUrls() );
 
 		/*
-		 * Display configurations so that people can see how this is will run.  Also, useful for troubleshooting.
-		 * We do not want to display the client secret here for security reasons.
+		 * Perform some basic validations of the parameters provided. Picocli already
+		 * does validation of required parameters.
 		 */
-		logger.info( String.format("%1$-20s %2$-30s ", " URL:", url ) );
-		logger.info( String.format("%1$-20s %2$-30s ", " Client ID:", clientId ) );
-		logger.info( String.format("%1$-20s %2$-30s ", " Files:", StringUtils.join( files, ", \n" ) ) );
-		logger.info( String.format("%1$-20s %2$-30s ", " ObjectType:", objectType ) );
+		if (StringUtils.endsWithIgnoreCase(clientId, "env")) {
+			logger.debug(" --clientId derived from $SAIL_CLIENT_ID");
+			clientId = System.getenv("SAIL_CLIENT_ID");
+		}
 
-		if ( DEFAULT_ACCOUNT_AGGREGATION.equals( objectType ) )
-			logger.info( String.format("%1$-20s %2$-30s ", " Optimization:", !disableOptimization ) );
+		if (StringUtils.endsWithIgnoreCase(clientSecret, "env")) {
+			logger.debug(" --clientSecret derived from $SAIL_CLIENT_SECRET");
+			clientSecret = System.getenv("SAIL_CLIENT_SECRET");
 
-		logger.info( String.format("%1$-20s %2$-30s ", " Recursive:", recursive ) );
-		logger.info( String.format("%1$-20s %2$-30s ", " Extensions:", StringUtils.join( fileExtensions, "," ) ) );
-		logger.info( String.format("%1$-20s %2$-30s ", " Simulation:", simulate ) );
-		logger.info( String.format("%1$-20s %2$-30s ", " Verbose:", verbose ) );
-		logger.info( String.format("%1$-20s %2$-30s ", " Timeout:", timeout ) );
-		logger.info( "------------------------------------------------------------------------------------------------------------" );
+		}
+
+		// Allow Proxy user and password to be set as environment variables for
+		// consistency
+		if (StringUtils.endsWithIgnoreCase(proxyUser, "env")) {
+			logger.debug(" --proxyUser derived from $SAIL_PROXY_USER");
+			clientId = System.getenv("SAIL_PROXY_USER");
+		}
+
+		if (StringUtils.endsWithIgnoreCase(proxyPassword, "env")) {
+			logger.debug(" --proxyPassword derived from $SAIL_PROXY_PASS");
+			clientSecret = System.getenv("SAIL_PROXY_PASS");
+
+		}
+
+		if (!StringUtils.startsWithIgnoreCase(url, "https://"))
+			throw new RuntimeException("Usage: The provided --url parameter must begin with 'https://'");
+
+		if (!SailPointUrl.isValid(url))
+			throw new RuntimeException("Usage: The provided --url parameter must be a valid API URL: \n"
+					+ SailPointUrl.getDisplayableUrls());
+
+		/*
+		 * Display configurations so that people can see how this is will run. Also,
+		 * useful for troubleshooting. We do not want to display the client secret here
+		 * for security reasons.
+		 */
+		logger.info(String.format("%1$-20s %2$-30s ", " URL:", url));
+		logger.info(String.format("%1$-20s %2$-30s ", " Client ID:", clientId));
+//		logger.info( String.format("%1$-20s %2$-30s ", " Files:", StringUtils.join( files, ", \n" ) ) );
+		logger.info(String.format("%1$-20s %2$-30s ", " Verbose:", verbose));
+		logger.info(
+				"------------------------------------------------------------------------------------------------------------");
 
 		Timer.start();
 
 		/*
 		 * Create a SailPoint Service which will do all the API calls.
 		 */
-		this.sailPointService = new SailPointService.Builder()
-				.url( url )
-				.clientId( clientId )
-				.clientSecret( clientSecret )
-				.timeout( timeout )
-				.proxy( proxyHost, proxyPort )
-				.proxyAuthentication( proxyUser, proxyPassword )
-				.build();
+		this.sailPointService = new SailPointService.Builder().url(url).clientId(clientId).clientSecret(clientSecret)
+				.timeout(timeout).proxy(proxyHost, proxyPort).proxyAuthentication(proxyUser, proxyPassword).build();
 
-		if ( proxyHost != null && proxyPort != -1 )
-			logger.debug( "Proxy enabled!  Initializing proxy with settings: proxyHost[" + proxyHost + "], proxyPort[" + proxyPort + "]." );
+		if (proxyHost != null && proxyPort != -1)
+			logger.debug("Proxy enabled!  Initializing proxy with settings: proxyHost[" + proxyHost + "], proxyPort["
+					+ proxyPort + "].");
+
+		fileProcessorService = new FileProcessorService(config, sailPointService);
 
 		/*
 		 * Check to make sure credentials are valid before we process files.
 		 */
 
-		logger.info( "Checking credentials..." );
+		logger.info("Checking credentials...");
 
 		try {
 
 			sailPointService.createSession();
 
-		} catch ( Exception e ) {
-			logger.error( "Error Logging into Identity Security Cloud.  Please check your credentials and try again. [" + e.getMessage() + "]" );
+		} catch (Exception e) {
+			logger.error("Error Logging into Identity Security Cloud.  Please check your credentials and try again. ["
+					+ e.getMessage() + "]");
 			System.exit(1);
 		}
 
-		/*
-		 * Start processing files...
-		 */
-
-		if ( CollectionUtils.isNotEmpty( files ) ) {
-
-			for (File file : files ) {
-
-				if ( file.isDirectory() ) {
-
-					logger.info( "Analyzing directory: " + file );
-
-					@SuppressWarnings("unchecked")
-					Iterator<File> fileIterator = FileUtils.iterateFiles( file, fileExtensions.toArray(String[]::new), recursive );
-
-					while ( fileIterator.hasNext() ) {
-						processFile( fileIterator.next() );
-					}
-
-				} else {
-					logger.info("Analyzing " + objectType + " file: " + file);
-					processFile( file );
-				}
+		if (config != null) {
+			if (config.getAggregations().length > 0) {
+				fileProcessorService.processAggregations(config, reporter);
+			} else {
+				logger.error("No aggregations to process, exiting...");
+				return -1;
 			}
+		} else {
+			ConfigAggregation configAggregation = new ConfigAggregation(disableOptimization, objectType, recursive,
+					simulate, proxyPort, fileExtensions.toArray(new String[0]));
+
+			fileProcessorService.processFiles(files, configAggregation, reporter);
 		}
 
-		logger.info( "Complete." );
+		logger.info("Complete.");
 
-		logger.info( "------------------------------------------------------------------------------------------------------------" );
-		logger.info( String.format("%1$-20s %2$-30s ", " Elapsed time:", ( Timer.secondsElapsed() ) + " seconds" ) );
-		logger.info( String.format("%1$-20s %2$-30s ", " Files processed:", reporter.countTotal() ) );
-		logger.info( "------------------------------------------------------------------------------------------------------------" );
+		logger.info(
+				"------------------------------------------------------------------------------------------------------------");
+		logger.info(String.format("%1$-20s %2$-30s ", " Elapsed time:", (Timer.secondsElapsed()) + " seconds"));
+		logger.info(String.format("%1$-20s %2$-30s ", " Files processed:", reporter.countTotal()));
+		logger.info(
+				"------------------------------------------------------------------------------------------------------------");
 
-		logger.info( String.format("%1$-20s %2$-30s ", " Success:", reporter.countSuccess() ) );
-		for( String successFile : reporter.getSuccess() )
-			logger.debug( "\t" + successFile );
+		logger.info(String.format("%1$-20s %2$-30s ", " Success:", reporter.countSuccess()));
+		for (String successFile : reporter.getSuccess())
+			logger.debug("\t" + successFile);
 
-		logger.info( "------------------------------------------------------------------------------------------------------------" );
+		logger.info(
+				"------------------------------------------------------------------------------------------------------------");
 
-		logger.info( String.format("%1$-20s %2$-30s ", " Error:", reporter.countErrors() ) );
-		for( String errorFile : reporter.getErrors() )
-			logger.debug( "\t" + errorFile );
+		logger.info(String.format("%1$-20s %2$-30s ", " Error:", reporter.countErrors()));
+		for (String errorFile : reporter.getErrors())
+			logger.debug("\t" + errorFile);
 
-		logger.info( "------------------------------------------------------------------------------------------------------------" );
+		logger.info(
+				"------------------------------------------------------------------------------------------------------------");
 
-		logger.info( String.format("%1$-20s %2$-30s ", " Skipped:", reporter.countSkips() ) );
-		for( String skippedFile : reporter.getSkips() )
-			logger.debug( "\t" + skippedFile );
+		logger.info(String.format("%1$-20s %2$-30s ", " Skipped:", reporter.countSkips()));
+		for (String skippedFile : reporter.getSkips())
+			logger.debug("\t" + skippedFile);
 
-		logger.info( "------------------------------------------------------------------------------------------------------------" );
+		logger.info(
+				"------------------------------------------------------------------------------------------------------------");
 
 		return 0;
-	}
-
-	/*
-	 * Helper Methods
-	 */
-
-	private void processFile( File file ) {
-
-		logger.info( "Analyzing " + objectType + " file: " + file.getName() );
-
-		final String sourceId = getSourceReferenceFromFile( file );
-		
-		System.out.println(sourceId);
-
-		if ( simulate ) {
-
-			logger.info( "\tFile [" + file.getName() + "]: Does not contain a valid source ID. Skipping..." );
-			reporter.skipped( file.getAbsolutePath() );
-
-		} else if ( StringUtils.length( sourceId ) == 32 ) {
-
-			ResponseBody response = null;
-
-			try {
-
-				/*
-				 * If the objectType is 'account' then we'll aggregate it as an account.  This is the default behavior.
-				 */
-				if ( DEFAULT_ACCOUNT_AGGREGATION.equalsIgnoreCase( objectType ) ) {
-
-					logger.debug( "\tFile [" + file.getName() + "]: Submitting Account Aggregation: Source ID[" + sourceId + "], Disable Optimization[" + disableOptimization + "]" );
-					response = sailPointService.aggregateAccounts(sourceId, disableOptimization, file);
-
-				/*
-				 * If the objectType is something else then we'll aggregate it as an entitlement.  Entitlement aggregations can be many different objectTypes.
-				 */
-				} else {
-
-					logger.debug( "\tFile [" + file.getName() + "]: Submitting Entitlement Aggregation: Source ID[" + sourceId + "], Object Type[" + objectType + "]" );
-					response = sailPointService.aggregateEntitlements(sourceId, objectType, file);
-
-				}
-
-				logger.debug( "\tFile [" + file.getName() + "]: Aggregation response: " + response.string() );
-
-				logger.info( "\tFile [" + file.getName() + "]: Aggregated successfully." );
-				reporter.success( file.getAbsolutePath() );
-
-			} catch ( Exception e ) {
-
-				logger.info( "\tFile [" + file.getName() + "]: Error: " + e.getMessage() );
-				reporter.error( file.getAbsolutePath() );
-
-			}
-
-		} else {
-
-			logger.info( "\tFile [" + file.getName() + "]: Does not contain a valid source ID. Skipping..." );
-			reporter.skipped( file.getAbsolutePath() );
-		}
-
-	}
-
-	private Map<String, String> buildSourceReferenceMap() {
-
-		Map<String, String> sourceReferenceMap = new HashMap<String, String>();
-
-		logger.debug( "------------------------------------------------------------------------------------------------------------" );
-		logger.debug( " Building source file lookup table. Starting source iteration. " );
-		logger.debug( " To avoid this scan, please switch to new Source IDs in your file names." );
-		logger.debug( " Older Source ID references will not be used in the future." );
-		logger.debug( "------------------------------------------------------------------------------------------------------------" );
-
-		Iterator<Source> it = sailPointService.listSources();
-
-		/*
-		 * Iterate through all the sources in the system.  For customers with a lot of sources, this lookup could be somewhat painful.
-		 * To avoid these kinds of lookups, we should move away from old CC IDs, and move to modern Source IDs. :)
-		 */
-		while (it.hasNext()) {
-
-			Source source = it.next();
-			String oldSourceReference = (String) source.getConnectorAttribute("cloudExternalId");
-			String newSourceReference = source.getId();
-
-			/*
-			 * This sourceReferenceMap is used to map old source IDs to new source IDs.
-			 * Keyed by old source IDs; Values are new source IDs
-			 * 184744 : 2c918087701c40cf01701dfdf2c61e2a
-			 */
-			if (oldSourceReference != null && newSourceReference != null) {
-				logger.debug( String.format("%1$-10s %2$-40s ", " " + oldSourceReference, " : " + newSourceReference ) );
-				sourceReferenceMap.put(oldSourceReference, newSourceReference);
-			}
-		}
-
-		logger.debug("------------------------------------------------------------------------------------------------------------");
-
-		return sourceReferenceMap;
-
-	}
-
-	private String getSourceReferenceFromFile( File file ) {
-
-		/*
-		 * First, look for the new-form Source ID in the file name
-		 * This can be found on the Source object as "id": "2c918087701c40cf01701dfdf2c61e2a"
-		 * and consists of 32 characters of any 0-9, a-f
-		 *
-		 * We'll parse the file name, and extract the new-form Source ID
-		 *   e.g., 2c918087701c40cf01701dfdf2c61e2a - Something.csv
-		 * Would return "2c918087701c40cf01701dfdf2c61e2a"
- 		 */
-		Matcher newMatcher = Pattern
-				.compile("^(\\s)?([0-9a-f]{32})")
-				.matcher(file.getName());
-
-		if (newMatcher.find()) {
-
-			String fileSourceId = StringUtils.trim(newMatcher.group());
-
-			logger.debug("\tFile [" + file.getName() + "]: detected with source ID reference [" + fileSourceId + "].");
-
-			return fileSourceId;
-
-		}
-
-		/*
-		 * Second, look for the old-form Source ID in the file name
-		 * This is mainly there for backwards compatibility purposes.
-		 *
-		 * This can be found on the Source object under "connectorAttributes"
-		 * as "cloudExternalId": "184744"
-		 * and consists of up to 10 characters of any number (0-9)
-		 *
-		 * We'll parse the file name, and extract the old-form Source ID
-		 *   e.g., 184744 - Something.csv
-		 * Would return "184744"
-		 */
-		Matcher oldMatcher = Pattern
-				.compile("^(\\s)?([0-9]{4,10})")
-				.matcher(file.getName());
-
-		if (oldMatcher.find()) {
-
-			String fileSourceId = StringUtils.trim(oldMatcher.group());
-
-			logger.debug("\tFile [" + file.getName() + "]: Detected with older source ID reference [" + fileSourceId + "]. Attempting to resolve.");
-
-			/*
-			 * First, check to see if we have a sourceReferenceMap defined.
-			 * If it is null, it hasn't yet been initialized, so we enter here.
-			 */
-			if (this.sourceReferenceMap == null) {
-				this.sourceReferenceMap = buildSourceReferenceMap();
-			}
-
-			/*
-			 * At this point, the sourceReferenceMap is not null, and has already been initialized.
-			 * Let's query what we have to see if we can resolve the oldSourceReference to the newSourceReference.
-			 */
-
-			if (this.sourceReferenceMap.containsKey(fileSourceId)) {
-
-				logger.debug("\tFile [" + file.getName() + "]: Successfully resolved old source ID reference [" + fileSourceId + "] to new source ID reference [" + sourceReferenceMap.get(fileSourceId) + "]");
-				return sourceReferenceMap.get(fileSourceId);
-
-			} else {
-
-				logger.error("\tFile [" + file.getName() + "]: Unable to resolve old source ID reference [" + fileSourceId + "] to new source ID reference. This file will be skipped.");
-				return null;
-			}
-		}
-
-		/*
-		 * This assumes we didn't find any source references in the file name.
-		 */
-		return null;
 	}
 }
