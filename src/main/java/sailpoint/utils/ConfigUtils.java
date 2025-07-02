@@ -20,38 +20,42 @@ import javax.crypto.spec.SecretKeySpec;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import sailpoint.exception.InvalidConfigException;
 import sailpoint.object.config.Config;
 
 public class ConfigUtils {
-	private static Logger logger = Logger.getInstance();
+    // 02/07/2025: Added Log4J
+    private static Logger LOG = LogManager.getLogger(ConfigUtils.class);
+
     public static Config ReadConfigFile(String path) throws InvalidConfigException {
-    	logger.debug(String.format("ReadConfigFile: %s", path));
+        LOG.debug(String.format("ReadConfigFile: %s", path));
         Gson gson = new Gson();
         try (Reader reader = new FileReader(path)) {
             // Convert JSON to Config object and return
             return gson.fromJson(reader, Config.class);
 
         } catch (IOException _exc) {
-        	logger.error(_exc.getMessage());
+            LOG.error(_exc.getMessage(), _exc);
             throw new InvalidConfigException("Error opening config file, see exception for details", _exc);
         }
     }
     
     public static void WriteConfigFile(String path, Config config) throws InvalidConfigException {
-    	logger.debug(String.format("WriteConfigFile: %s", path));
+        LOG.debug(String.format("WriteConfigFile: %s", path));
         try (Writer writer = new FileWriter(path)) {
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
 //            System.out.println(config);
             gson.toJson(config, writer);
         } catch (IOException _exc) {
-        	logger.error(_exc.getMessage());
+            LOG.error(_exc.getMessage(), _exc);
             throw new InvalidConfigException("Error writing config file, see exception for details", _exc);
         }
     }
     
     public static String DecodeConfigItem(Config config, String encodedString) throws InvalidConfigException {
-    	logger.debug(String.format("DecodeConfigItem: %s", encodedString));
+        LOG.debug(String.format("DecodeConfigItem: %s", encodedString));
     	String ks = config.getKs();
     	byte[] decodedKey = Base64.getDecoder().decode(config.getKs());
         SecretKey secretKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
@@ -60,14 +64,13 @@ public class ConfigUtils {
         	GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(128, Base64.getDecoder().decode(config.getIv()));
 			return EncryptionUtils.decrypt(EncryptionUtils.ALGORITHM, encodedString, secretKey, gcmParameterSpec);
 		} catch (Exception _exc) {
-//			_exc.printStackTrace();
-			logger.error(_exc.getMessage());
+            LOG.error(_exc.getMessage(), _exc);
 			throw new InvalidConfigException("Error decoding secret key", _exc);
 		}
     }
 
     public static Config EncodeSecrets(Config config) throws InvalidConfigException {
-    	logger.debug(String.format("EncodeSecrets"));
+        LOG.debug(String.format("EncodeSecrets"));
         String cSecret = config.getTenant().getClientSecret();
         String pxPass = config.getProxy().getPassword();
         boolean proxyEnabled = config.getProxy().isEnabled();
@@ -78,7 +81,7 @@ public class ConfigUtils {
         	GCMParameterSpec gcmParameterSpec = null;
         	
         	if (iv == null || iv.length() == 0) {
-        		logger.debug(String.format("Generating IV"));
+                LOG.debug(String.format("Generating IV"));
         		gcmParameterSpec = EncryptionUtils.generateInitVector();
 //        		System.out.println(gcmParameterSpec.getTLen());
         		config.setIv(new String(Base64.getEncoder().encode(gcmParameterSpec.getIV())));
@@ -88,7 +91,7 @@ public class ConfigUtils {
         	
         	
         	if (ks == null || ks.length() == 0) {
-        		logger.debug(String.format("Generating Key"));
+                LOG.debug(String.format("Generating Key"));
             	SecretKey key = EncryptionUtils.generateKey(128);
             	
             	byte[] rawData = key.getEncoded();
@@ -103,24 +106,21 @@ public class ConfigUtils {
             SecretKey secretKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
             
             if (cSecret != null && cSecret.length() > 0 && !cSecret.startsWith("%%") && !cSecret.equalsIgnoreCase("env")) {
-            	logger.debug(String.format("Encrypting Client Secret"));
+                LOG.debug(String.format("Encrypting Client Secret"));
             	String encodedSecret = EncryptionUtils.encrypt(EncryptionUtils.ALGORITHM, cSecret, secretKey, gcmParameterSpec);
             	config.getTenant().setClientSecret("%%" + encodedSecret);
             }
             
             if (proxyEnabled && pxPass != null && pxPass.length() > 0 && !pxPass.startsWith("%%") && !pxPass.equalsIgnoreCase("env")) {
-            	logger.debug(String.format("Encrypting Proxy Password"));
+                LOG.debug(String.format("Encrypting Proxy Password"));
             	String encodedSecret = EncryptionUtils.encrypt(EncryptionUtils.ALGORITHM, pxPass, secretKey, gcmParameterSpec);
             	config.getProxy().setPassword("%%" + encodedSecret);
             }
             return config;
         } catch (Exception _exc) {
-//        	_exc.printStackTrace();
-        	logger.error(_exc.getMessage());
+            LOG.error(_exc.getMessage(), _exc);
         	throw new InvalidConfigException("Error while encrypting config secrets: " + _exc.getMessage(), _exc);
         	
         }
-        
-        
     }
 }

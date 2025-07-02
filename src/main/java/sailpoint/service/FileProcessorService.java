@@ -1,9 +1,6 @@
 package sailpoint.service;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -17,17 +14,19 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import okhttp3.ResponseBody;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import sailpoint.app.FileUploadUtility;
 import sailpoint.object.Source;
 import sailpoint.object.config.Config;
 import sailpoint.object.config.ConfigAggregation;
-import sailpoint.object.config.ConfigStructure;
-import sailpoint.utils.Logger;
 import sailpoint.utils.Reporter;
 
 public class FileProcessorService {
 	private Config config;
-	private Logger logger = Logger.getInstance();
+
+	// 02/07/2025: Added Log4J
+	private static Logger LOG = LogManager.getLogger(FileProcessorService.class);
 
 	/*
 	 * This sourceReferenceMap is used to map old source IDs to new source IDs.
@@ -51,7 +50,7 @@ public class FileProcessorService {
 
 				if (file.isDirectory()) {
 
-					logger.info("Analyzing directory: " + file);
+					LOG.info("Analyzing directory: " + file);
 
 					@SuppressWarnings("unchecked")
 					Iterator<File> fileIterator = FileUtils.iterateFiles(file, configAggregation.getExtensions(),
@@ -62,7 +61,7 @@ public class FileProcessorService {
 					}
 
 				} else {
-					logger.info("Analyzing " + file.getName() + " file: " + file);
+					LOG.info("Analyzing " + file.getName() + " file: " + file);
 					processFile(file, configAggregation, reporter);
 				}
 			}
@@ -70,7 +69,7 @@ public class FileProcessorService {
 	}
 
 	public void processAggregations(Config config, Reporter reporter) {
-		logger.debug("processAggregations: entry");
+		LOG.debug("processAggregations: entry");
 
 		ConfigAggregation[] aggregations = config.getAggregations();
 
@@ -80,9 +79,9 @@ public class FileProcessorService {
 			// TODO: Check required fields.
 
 			if (!inDirectory.isDirectory()) {
-				// TODO: Process File
+				processFile(inDirectory, agg, reporter);
 			} else {
-				logger.info("Analyzing directory: " + inDirectory);
+				LOG.info("Analyzing directory: " + inDirectory);
 
 				@SuppressWarnings("unchecked")
 				Iterator<File> fileIterator = FileUtils.iterateFiles(inDirectory, agg.getExtensions(),
@@ -97,11 +96,11 @@ public class FileProcessorService {
 	}
 
 	private void processFile(File file, ConfigAggregation aggregation, Reporter reporter) {
-		logger.info("Analyzing " + aggregation.getObjectType() + " file: " + file.getName());
+		LOG.info("Analyzing " + aggregation.getObjectType() + " file: " + file.getName());
 
 		if (aggregation.isSimulate()) {
 
-			logger.info("\tFile [" + file.getName() + "]: Has not been processed due to simulation. Skipping...");
+			LOG.info("\tFile [" + file.getName() + "]: Has not been processed due to simulation. Skipping...");
 			reporter.skipped(file.getAbsolutePath());
 
 		} else if (StringUtils.length(aggregation.getSourceId()) == 32) {
@@ -109,19 +108,19 @@ public class FileProcessorService {
 			ResponseBody response = null;
 
 			try {
-				logger.info(String.format("%1$-20s %2$-30s ", " ObjectType:", aggregation.getObjectType()));
+				LOG.info(String.format("%1$-20s %2$-30s ", " ObjectType:", aggregation.getObjectType()));
 
 				if (FileUploadUtility.DEFAULT_ACCOUNT_AGGREGATION.equals(aggregation.getObjectType()))
-					logger.info(
+					LOG.info(
 							String.format("%1$-20s %2$-30s ", " Optimization:", !aggregation.isDisableOptimization()));
 
-				logger.info(String.format("%1$-20s %2$-30s ", " Recursive:", aggregation.isRecursive()));
-				logger.info(String.format("%1$-20s %2$-30s ", " Extensions:",
+				LOG.info(String.format("%1$-20s %2$-30s ", " Recursive:", aggregation.isRecursive()));
+				LOG.info(String.format("%1$-20s %2$-30s ", " Extensions:",
 						StringUtils.join(aggregation.getExtensions(), ",")));
-				logger.info(String.format("%1$-20s %2$-30s ", " Simulation:", aggregation.isSimulate()));
+				LOG.info(String.format("%1$-20s %2$-30s ", " Simulation:", aggregation.isSimulate()));
 
-				logger.info(String.format("%1$-20s %2$-30s ", " Timeout:", aggregation.getTimeout()));
-				logger.info(
+				LOG.info(String.format("%1$-20s %2$-30s ", " Timeout:", aggregation.getTimeout()));
+				LOG.info(
 						"------------------------------------------------------------------------------------------------------------");
 
 				if (aggregation.isEnableFileJourney()) {
@@ -137,7 +136,7 @@ public class FileProcessorService {
 				 */
 				if ("account".equalsIgnoreCase(aggregation.getObjectType())) {
 
-					logger.debug("\tFile [" + file.getName() + "]: Submitting Account Aggregation: Source ID["
+					LOG.debug("\tFile [" + file.getName() + "]: Submitting Account Aggregation: Source ID["
 							+ aggregation.getSourceId() + "], Disable Optimization["
 							+ aggregation.isDisableOptimization() + "]");
 					response = sailPointService.aggregateAccounts(aggregation.getSourceId(),
@@ -149,16 +148,16 @@ public class FileProcessorService {
 					 */
 				} else {
 
-					logger.debug("\tFile [" + file.getName() + "]: Submitting Entitlement Aggregation: Source ID["
+					LOG.debug("\tFile [" + file.getName() + "]: Submitting Entitlement Aggregation: Source ID["
 							+ aggregation.getSourceId() + "], Object Type[" + aggregation.getObjectType() + "]");
 					response = sailPointService.aggregateEntitlements(aggregation.getSourceId(),
 							aggregation.getObjectType(), file);
 
 				}
 
-				logger.debug("\tFile [" + file.getName() + "]: Aggregation response: " + response.string());
+				LOG.debug("\tFile [" + file.getName() + "]: Aggregation response: " + response.string());
 
-				logger.info("\tFile [" + file.getName() + "]: Aggregated successfully.");
+				LOG.info("\tFile [" + file.getName() + "]: Aggregated successfully.");
 				if (aggregation.isEnableFileJourney()) {
 					File newFile = new File(aggregation.getStructure().getArchive() + File.separator + file.getName());
 					file.renameTo(newFile);
@@ -168,7 +167,7 @@ public class FileProcessorService {
 
 			} catch (Exception e) {
 
-				logger.info("\tFile [" + file.getName() + "]: Error: " + e.getMessage());
+				LOG.info("\tFile [" + file.getName() + "]: Error: " + e.getMessage());
 				if (aggregation.isEnableFileJourney()) {
 					File newFile = new File(aggregation.getStructure().getError() + File.separator + file.getName());
 					file.renameTo(newFile);
@@ -180,7 +179,7 @@ public class FileProcessorService {
 
 		} else {
 
-			logger.info("\tFile [" + file.getName() + "]: Does not contain a valid source ID. Skipping...");
+			LOG.info("\tFile [" + file.getName() + "]: Does not contain a valid source ID. Skipping...");
 			reporter.skipped(file.getAbsolutePath());
 		}
 	}
@@ -189,12 +188,12 @@ public class FileProcessorService {
 
 		Map<String, String> sourceReferenceMap = new HashMap<String, String>();
 
-		logger.debug(
+		LOG.debug(
 				"------------------------------------------------------------------------------------------------------------");
-		logger.debug(" Building source file lookup table. Starting source iteration. ");
-		logger.debug(" To avoid this scan, please switch to new Source IDs in your file names.");
-		logger.debug(" Older Source ID references will not be used in the future.");
-		logger.debug(
+		LOG.debug(" Building source file lookup table. Starting source iteration. ");
+		LOG.debug(" To avoid this scan, please switch to new Source IDs in your file names.");
+		LOG.debug(" Older Source ID references will not be used in the future.");
+		LOG.debug(
 				"------------------------------------------------------------------------------------------------------------");
 
 		Iterator<Source> it = sailPointService.listSources();
@@ -217,12 +216,12 @@ public class FileProcessorService {
 			 * 2c918087701c40cf01701dfdf2c61e2a
 			 */
 			if (oldSourceReference != null && newSourceReference != null) {
-				logger.debug(String.format("%1$-10s %2$-40s ", " " + oldSourceReference, " : " + newSourceReference));
+				LOG.debug(String.format("%1$-10s %2$-40s ", " " + oldSourceReference, " : " + newSourceReference));
 				sourceReferenceMap.put(oldSourceReference, newSourceReference);
 			}
 		}
 
-		logger.debug(
+		LOG.debug(
 				"------------------------------------------------------------------------------------------------------------");
 
 		return sourceReferenceMap;
@@ -246,7 +245,7 @@ public class FileProcessorService {
 
 			String fileSourceId = StringUtils.trim(newMatcher.group());
 
-			logger.debug("\tFile [" + file.getName() + "]: detected with source ID reference [" + fileSourceId + "].");
+			LOG.debug("\tFile [" + file.getName() + "]: detected with source ID reference [" + fileSourceId + "].");
 
 			return fileSourceId;
 
@@ -269,7 +268,7 @@ public class FileProcessorService {
 
 			String fileSourceId = StringUtils.trim(oldMatcher.group());
 
-			logger.debug("\tFile [" + file.getName() + "]: Detected with older source ID reference [" + fileSourceId
+			LOG.debug("\tFile [" + file.getName() + "]: Detected with older source ID reference [" + fileSourceId
 					+ "]. Attempting to resolve.");
 
 			/*
@@ -288,13 +287,13 @@ public class FileProcessorService {
 
 			if (this.sourceReferenceMap.containsKey(fileSourceId)) {
 
-				logger.debug("\tFile [" + file.getName() + "]: Successfully resolved old source ID reference ["
+				LOG.debug("\tFile [" + file.getName() + "]: Successfully resolved old source ID reference ["
 						+ fileSourceId + "] to new source ID reference [" + sourceReferenceMap.get(fileSourceId) + "]");
 				return sourceReferenceMap.get(fileSourceId);
 
 			} else {
 
-				logger.error("\tFile [" + file.getName() + "]: Unable to resolve old source ID reference ["
+				LOG.error("\tFile [" + file.getName() + "]: Unable to resolve old source ID reference ["
 						+ fileSourceId + "] to new source ID reference. This file will be skipped.");
 				return null;
 			}

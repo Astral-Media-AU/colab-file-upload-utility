@@ -4,17 +4,17 @@ import okhttp3.ResponseBody;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
-import sailpoint.object.Source;
 import sailpoint.object.config.Config;
 import sailpoint.object.config.ConfigAggregation;
 import sailpoint.service.FileProcessorService;
 import sailpoint.service.SailPointService;
 import sailpoint.utils.ConfigUtils;
-import sailpoint.utils.EncryptionUtils;
-import sailpoint.utils.FileManagementUtils;
-import sailpoint.utils.Logger;
+
 import sailpoint.utils.Reporter;
 import sailpoint.utils.SailPointUrl;
 import sailpoint.utils.Timer;
@@ -24,8 +24,6 @@ import static sailpoint.app.FileUploadUtility.*;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.Callable;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @CommandLine.Command(usageHelpAutoWidth = true, name = "java -jar sailpoint-file-upload-utility.jar", sortOptions = false, headerHeading = "%nUsage:%n%n", synopsisHeading = "%n", descriptionHeading = "%nDescription:%n%n", parameterListHeading = "%nParameters:%n", optionListHeading = "%nOptions:%n", header = "Perform bulk file aggregations to Identity Security Cloud.", description = "Scans specified files and directories for files in bulk, to send to Identity Security Cloud for account or entitlement aggregation.  For more details see: "
 		+ ABOUT_LINK, version = { "SailPoint File Upload Utility " + ABOUT_VERSION, "Build: " + ABOUT_DATE,
@@ -33,6 +31,9 @@ import java.util.regex.Pattern;
 				"JVM: ${java.version} (${java.vendor} ${java.vm.name} ${java.vm.version})",
 				"OS: ${os.name} ${os.version} ${os.arch}" })
 public class FileUploadUtility implements Callable<Integer> {
+
+	// 02/07/2025: Added Log4J
+	private static Logger LOG = LogManager.getLogger(FileUploadUtility.class);
 
 	/**
 	 * Metadata about the File Upload Utility
@@ -106,7 +107,6 @@ public class FileUploadUtility implements Callable<Integer> {
 	/**
 	 * Variables for Execution
 	 */
-	private Logger logger;
 
 	private Reporter reporter;
 
@@ -168,20 +168,17 @@ public class FileUploadUtility implements Callable<Integer> {
 
 	@Override
 	public Integer call() throws Exception {
-
-		this.logger = Logger.getInstance(this.verbose);
-
 		Config config = null;
 
-		logger.info(
+		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");
-		logger.info(" SailPoint File Upload Utility");
-		logger.info(
+		LOG.info(" SailPoint File Upload Utility");
+		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");
-		logger.info(String.format("%1$-20s %2$-30s ", " Version:", ABOUT_VERSION));
-		logger.info(String.format("%1$-20s %2$-30s ", " Date:", ABOUT_DATE));
-		logger.info(String.format("%1$-20s %2$-30s ", " Docs:", ABOUT_LINK));
-		logger.info(
+		LOG.info(String.format("%1$-20s %2$-30s ", " Version:", ABOUT_VERSION));
+		LOG.info(String.format("%1$-20s %2$-30s ", " Date:", ABOUT_DATE));
+		LOG.info(String.format("%1$-20s %2$-30s ", " Docs:", ABOUT_LINK));
+		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");
 
 		/**
@@ -189,7 +186,7 @@ public class FileUploadUtility implements Callable<Integer> {
 		 * secret, these override the config file.
 		 */
 		if (!configFile.isEmpty()) {
-			logger.debug(" --config-file specified, attempting to load.");
+			LOG.debug(" --config-file specified, attempting to load.");
 			config = ConfigUtils.ReadConfigFile(configFile);
 			ConfigUtils.EncodeSecrets(config);
 //			System.out.println(config.getTenant().getClientSecret());
@@ -206,10 +203,10 @@ public class FileUploadUtility implements Callable<Integer> {
 				this.clientSecret = config.getTenant().getClientSecret();
 			}
 
-//			System.out.println("DEC: " + this.clientSecret);
 			this.url = config.getTenant().getUrl();
 
 			if (config.getProxy().isEnabled()) {
+				LOG.debug("Proxy is enabled in config file");
 				this.proxyHost = config.getProxy().getHost();
 				this.proxyPort = config.getProxy().getPort();
 				this.proxyUser = config.getProxy().getUser();
@@ -228,12 +225,12 @@ public class FileUploadUtility implements Callable<Integer> {
 		 * does validation of required parameters.
 		 */
 		if (StringUtils.endsWithIgnoreCase(clientId, "env")) {
-			logger.debug(" --clientId derived from $SAIL_CLIENT_ID");
+			LOG.debug(" --clientId derived from $SAIL_CLIENT_ID");
 			clientId = System.getenv("SAIL_CLIENT_ID");
 		}
 
 		if (StringUtils.endsWithIgnoreCase(clientSecret, "env")) {
-			logger.debug(" --clientSecret derived from $SAIL_CLIENT_SECRET");
+			LOG.debug(" --clientSecret derived from $SAIL_CLIENT_SECRET");
 			clientSecret = System.getenv("SAIL_CLIENT_SECRET");
 
 		}
@@ -241,12 +238,12 @@ public class FileUploadUtility implements Callable<Integer> {
 		// Allow Proxy user and password to be set as environment variables for
 		// consistency
 		if (StringUtils.endsWithIgnoreCase(proxyUser, "env")) {
-			logger.debug(" --proxyUser derived from $SAIL_PROXY_USER");
+			LOG.debug(" --proxyUser derived from $SAIL_PROXY_USER");
 			clientId = System.getenv("SAIL_PROXY_USER");
 		}
 
 		if (StringUtils.endsWithIgnoreCase(proxyPassword, "env")) {
-			logger.debug(" --proxyPassword derived from $SAIL_PROXY_PASS");
+			LOG.debug(" --proxyPassword derived from $SAIL_PROXY_PASS");
 			clientSecret = System.getenv("SAIL_PROXY_PASS");
 
 		}
@@ -263,11 +260,11 @@ public class FileUploadUtility implements Callable<Integer> {
 		 * useful for troubleshooting. We do not want to display the client secret here
 		 * for security reasons.
 		 */
-		logger.info(String.format("%1$-20s %2$-30s ", " URL:", url));
-		logger.info(String.format("%1$-20s %2$-30s ", " Client ID:", clientId));
+		LOG.info(String.format("%1$-20s %2$-30s ", " URL:", url));
+		LOG.info(String.format("%1$-20s %2$-30s ", " Client ID:", clientId));
 //		logger.info( String.format("%1$-20s %2$-30s ", " Files:", StringUtils.join( files, ", \n" ) ) );
-		logger.info(String.format("%1$-20s %2$-30s ", " Verbose:", verbose));
-		logger.info(
+		LOG.info(String.format("%1$-20s %2$-30s ", " Verbose:", verbose));
+		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");
 
 		Timer.start();
@@ -279,7 +276,7 @@ public class FileUploadUtility implements Callable<Integer> {
 				.timeout(timeout).proxy(proxyHost, proxyPort).proxyAuthentication(proxyUser, proxyPassword).build();
 
 		if (proxyHost != null && proxyPort != -1)
-			logger.debug("Proxy enabled!  Initializing proxy with settings: proxyHost[" + proxyHost + "], proxyPort["
+			LOG.debug("Proxy enabled!  Initializing proxy with settings: proxyHost[" + proxyHost + "], proxyPort["
 					+ proxyPort + "].");
 
 		fileProcessorService = new FileProcessorService(config, sailPointService);
@@ -288,15 +285,15 @@ public class FileUploadUtility implements Callable<Integer> {
 		 * Check to make sure credentials are valid before we process files.
 		 */
 
-		logger.info("Checking credentials...");
+		LOG.info("Checking credentials...");
 
 		try {
 
 			sailPointService.createSession();
 
 		} catch (Exception e) {
-			logger.error("Error Logging into Identity Security Cloud.  Please check your credentials and try again. ["
-					+ e.getMessage() + "]");
+			LOG.error("Error Logging into Identity Security Cloud.  Please check your credentials and try again. ["
+					+ e.getMessage() + "]", e);
 			System.exit(1);
 		}
 
@@ -304,7 +301,7 @@ public class FileUploadUtility implements Callable<Integer> {
 			if (config.getAggregations().length > 0) {
 				fileProcessorService.processAggregations(config, reporter);
 			} else {
-				logger.error("No aggregations to process, exiting...");
+				LOG.info("No aggregations to process, exiting...");
 				return -1;
 			}
 		} else {
@@ -314,34 +311,34 @@ public class FileUploadUtility implements Callable<Integer> {
 			fileProcessorService.processFiles(files, configAggregation, reporter);
 		}
 
-		logger.info("Complete.");
+		LOG.info("Complete.");
 
-		logger.info(
+		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");
-		logger.info(String.format("%1$-20s %2$-30s ", " Elapsed time:", (Timer.secondsElapsed()) + " seconds"));
-		logger.info(String.format("%1$-20s %2$-30s ", " Files processed:", reporter.countTotal()));
-		logger.info(
+		LOG.info(String.format("%1$-20s %2$-30s ", " Elapsed time:", (Timer.secondsElapsed()) + " seconds"));
+		LOG.info(String.format("%1$-20s %2$-30s ", " Files processed:", reporter.countTotal()));
+		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");
 
-		logger.info(String.format("%1$-20s %2$-30s ", " Success:", reporter.countSuccess()));
+		LOG.info(String.format("%1$-20s %2$-30s ", " Success:", reporter.countSuccess()));
 		for (String successFile : reporter.getSuccess())
-			logger.debug("\t" + successFile);
+			LOG.debug("\t" + successFile);
 
-		logger.info(
+		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");
 
-		logger.info(String.format("%1$-20s %2$-30s ", " Error:", reporter.countErrors()));
+		LOG.info(String.format("%1$-20s %2$-30s ", " Error:", reporter.countErrors()));
 		for (String errorFile : reporter.getErrors())
-			logger.debug("\t" + errorFile);
+			LOG.debug("\t" + errorFile);
 
-		logger.info(
+		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");
 
-		logger.info(String.format("%1$-20s %2$-30s ", " Skipped:", reporter.countSkips()));
+		LOG.info(String.format("%1$-20s %2$-30s ", " Skipped:", reporter.countSkips()));
 		for (String skippedFile : reporter.getSkips())
-			logger.debug("\t" + skippedFile);
+			LOG.debug("\t" + skippedFile);
 
-		logger.info(
+		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");
 
 		return 0;
