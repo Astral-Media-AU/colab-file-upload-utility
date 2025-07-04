@@ -239,13 +239,12 @@ public class FileUploadUtility implements Callable<Integer> {
 		// consistency
 		if (StringUtils.endsWithIgnoreCase(proxyUser, "env")) {
 			LOG.debug(" --proxyUser derived from $SAIL_PROXY_USER");
-			clientId = System.getenv("SAIL_PROXY_USER");
+			proxyUser = System.getenv("SAIL_PROXY_USER");
 		}
 
 		if (StringUtils.endsWithIgnoreCase(proxyPassword, "env")) {
 			LOG.debug(" --proxyPassword derived from $SAIL_PROXY_PASS");
-			clientSecret = System.getenv("SAIL_PROXY_PASS");
-
+			proxyPassword = System.getenv("SAIL_PROXY_PASS");
 		}
 
 		if (!StringUtils.startsWithIgnoreCase(url, "https://"))

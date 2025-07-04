@@ -33,24 +33,23 @@ We cover using specific use cases further below, but here are all available opti
 
 | Option                               | Required | Example Usage                                  | Description                                                                                                                                                                                           |
 |--------------------------------------|----------|------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|`-c`, `--config-file`|Optional|`--config-file=/var/uploader/config.json`|
-| `-u <arg>`, `--url <arg>`            | Required | `--url https://example.api.identitynow.com`    | SailPoint API Gateway (e.g. https://tenant.api.identitynow.com)                                                                                                                                       |
-| `-i <arg>`, `--clientId <arg>`       | Required | `--clientId d0b...574`                         | SailPoint Client ID (PAT). If value of `env` is provided, then the value for environment variable `SAIL_CLIENT_ID` will be used.                                                                      |
-| `-s <arg>`, `--clientSecret <arg>`   | Required | `--clientSecret a34...1df`                     | SailPoint Client Secret (PAT).  If a value is not supplied, will be prompted interactively.  If value of `env` is provided, then the value for environment variable `SAIL_CLIENT_SECRET` will be used. |
-| `-f <arg>`, `--file <arg>`           | Required | `--file /Users/neil.mcglennon/test/resources/` | File or directories for bulk aggregation. This can be specified multiple times.                                                                                                                       |
-| `-d`, `--disableOptimization`        | Optional | `--disableOptimization`                        | Disable Optimization on Account Aggregation                                                                                                                                                           |
-| `-o <arg>`, `--objectType <arg>`     | Optional | `--objectType group`                           | File Type; Account or Entitlement Schema. Default: Account                                                                                                                                            |
-| `-R`, `--recursive`                  | Optional | `--recursive`                                  | Recursively search directories                                                                                                                                                                        |
-| `-S`, `--simulate`                   | Optional | `--simulate`                                   | Simulation Mode.  Scans for files but does not aggregate.                                                                                                                                             |
-| `-t <arg>`, `--timeout <arg>`        | Optional | `--timeout 100000`                             | Timeout (in milliseconds). Default: 10000 (10s)                                                                                                                                                       |
-| `-x <arg>`, `--extension <arg>`      | Optional | `--extension csv`                              | File extensions to search (for directories only).  Default: csv                                                                                                                                       |
-<!-- | `-v`, `--verbose`                    | Optional | `--verbose`                                    | Verbose logging. Default: false                                                                                                                                                                       | -->
-| `-H <arg>`, `--proxyHost <arg>`      | Optional | `--proxyHost proxy.host.com`                   | Proxy host name or IP. Use `--proxyHost` and `--proxyPort` together.                                                                                                                                  |
-| `-P <arg>`, `--proxyPort <arg>`      | Optional | `--proxyPort 443`                              | Proxy port. Use `--proxyHost` and `--proxyPort` together.                                                                                                                                             |
-| `-U <arg>`, `--proxyUser <arg>`      | Optional | `--proxyUser foo`                              | Proxy user for authenticated proxies. Use `--proxyUser` and `--proxyPassword` together.                                                                                                               |
-| `-W <arg>`, `--proxyPassword <arg>`  | Optional | `--proxyPassword bar`                          | Proxy password for authenticated proxies. Use `--proxyUser` and `--proxyPassword` together. If a value is not supplied, will be prompted interactively.                                                                                                          |
-| `-V`, `--version`                    | Optional | `--version`                                    | Displays the current version.                                                                                                                                                                         |
-| `-h`, `--help`                       | Optional | `--help`                                       | Displays help.                                                                                                                                                                                        |
+|`-c`, `--config-file`|Optional|`--config-file=/var/uploader/config.json`|Path and filename of JSON configuration file|
+| `-u <arg>`, `--url <arg>`| Required, if not using Config JSON | `--url https://example.api.identitynow.com`| SailPoint API Gateway (e.g. https://tenant.api.identitynow.com)|
+| `-i <arg>`, `--clientId <arg>`| Required, if not using Config JSON | `--clientId d0b...574`| SailPoint Client ID (PAT). If value of `env` is provided, then the value for environment variable `SAIL_CLIENT_ID` will be used.                                                                      |
+| `-s <arg>`, `--clientSecret <arg>`| Required, if not using Config JSON | `--clientSecret a34...1df`| SailPoint Client Secret (PAT).  If a value is not supplied, will be prompted interactively.  If value of `env` is provided, then the value for environment variable `SAIL_CLIENT_SECRET` will be used. |
+| `-f <arg>`, `--file <arg>`| Required, if not using Config JSON | `--file /Users/neil.mcglennon/test/resources/` | File or directories for bulk aggregation. This can be specified multiple times.|
+| `-d`, `--disableOptimization`| Optional | `--disableOptimization`| Disable Optimization on Account Aggregation|
+| `-o <arg>`, `--objectType <arg>`| Optional | `--objectType group`| File Type; Account or Entitlement Schema. Default: Account|
+| `-R`, `--recursive`| Optional | `--recursive`| Recursively search directories|
+| `-S`, `--simulate`| Optional | `--simulate`| Simulation Mode.  Scans for files but does not aggregate.|
+| `-t <arg>`, `--timeout <arg>`| Optional | `--timeout 100000`| Timeout (in milliseconds). Default: 10000 (10s)|
+| `-x <arg>`, `--extension <arg>`| Optional | `--extension csv`| File extensions to search (for directories only).  Default: csv|
+| `-H <arg>`, `--proxyHost <arg>`| Optional | `--proxyHost proxy.host.com`| Proxy host name or IP. Use `--proxyHost` and `--proxyPort` together.|
+| `-P <arg>`, `--proxyPort <arg>`| Optional | `--proxyPort 443`| Proxy port. Use `--proxyHost` and `--proxyPort` together.|
+| `-U <arg>`, `--proxyUser <arg>`| Optional | `--proxyUser foo`| Proxy user for authenticated proxies. Use `--proxyUser` and `--proxyPassword` together.|
+| `-W <arg>`, `--proxyPassword <arg>`  | Optional | `--proxyPassword bar`| Proxy password for authenticated proxies. Use `--proxyUser` and `--proxyPassword` together. If a value is not supplied, will be prompted interactively.|
+| `-V`, `--version`| Optional | `--version`| Displays the current version.|
+| `-h`, `--help`| Optional | `--help`| Displays help.|
 
 ## Requirements
 
@@ -69,7 +68,7 @@ Usage:
 Perform bulk file aggregations to Identity Security Cloud.
 
 java -jar sailpoint-file-upload-utility.jar [-dhRSV] [-s[=<clientSecret>]] [-W[=<proxyPassword>]] [-c=<configFile>] [-H=<proxyHost>] [-i=<clientId>] [-o=<objectType>]
-                                            [-P=<proxyPort>] [-t=<timeout>] [-u=<url>] [-U=<proxyUser>] [-f=<files>]... [-x=<fileExtensions>]...
+ [-P=<proxyPort>] [-t=<timeout>] [-u=<url>] [-U=<proxyUser>] [-f=<files>]... [-x=<fileExtensions>]...
 
 Description:
 
@@ -147,7 +146,6 @@ $ java -jar sailpoint-file-upload-utility.jar --url https://example.api.identity
  Recursive:          true                           
  Extensions:         csv                            
  Simulation:         false                          
-#  Verbose:            false                          
  Timeout:            10000                          
 ------------------------------------------------------------------------------------------------------------
 Checking credentials...
@@ -218,7 +216,6 @@ $ java -jar sailpoint-file-upload-utility.jar --url https://example.api.identity
  Recursive:          true                           
  Extensions:         csv                            
  Simulation:         false                          
-#  Verbose:            true                           
  Timeout:            10000                          
 ------------------------------------------------------------------------------------------------------------
 Checking credentials...
@@ -337,7 +334,6 @@ $ java -jar sailpoint-file-upload-utility.jar --url https://example.api.identity
  Recursive:          true                           
  Extensions:         csv                            
  Simulation:         false                          
-#  Verbose:            true                           
  Timeout:            10000                          
 ------------------------------------------------------------------------------------------------------------
 Checking credentials...
@@ -368,7 +364,6 @@ Enter value for --clientSecret (SailPoint Client Secret (PAT)): a34xxxxxxxxxxxxx
  Recursive:          true                           
  Extensions:         csv                            
  Simulation:         false                          
-#  Verbose:            true                           
  Timeout:            10000                          
 ------------------------------------------------------------------------------------------------------------
 Analyzing directory: /Users/neil.mcglennon/test/resources
