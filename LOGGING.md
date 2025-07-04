@@ -114,7 +114,11 @@ The following outlines a configuration file that does the following:
         <Http name="SPLUNK" url="https://<<<Splunk:Instance>>>/services/collector/raw">
                 <Property name="Authorization" value="Splunk <<<Splunk:Access Token>>>"/>
                 <Property name="Content-Type" value="application/json"/>
-                <PatternLayout pattern="%d %m%n"/>
+                <PatternLayout pattern="[%level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"/>
+            <Filters>
+                <!-- Filter out the console formatting lines -->
+                <RegexFilter regex="------------------------------------------------------------------------------------------------------------" onMatch="DENY" onMismatch="NEUTRAL" />
+            </Filters>
         </Http>
     </Appenders>
 

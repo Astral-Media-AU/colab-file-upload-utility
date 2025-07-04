@@ -284,7 +284,7 @@ public class FileUploadUtility implements Callable<Integer> {
 		 * Check to make sure credentials are valid before we process files.
 		 */
 
-		LOG.info("Checking credentials...");
+		LOG.info(" Checking credentials...");
 
 		try {
 
@@ -300,7 +300,7 @@ public class FileUploadUtility implements Callable<Integer> {
 			if (config.getAggregations().length > 0) {
 				fileProcessorService.processAggregations(config, reporter);
 			} else {
-				LOG.info("No aggregations to process, exiting...");
+				LOG.info(" No aggregations to process, exiting...");
 				return -1;
 			}
 		} else {
@@ -310,7 +310,7 @@ public class FileUploadUtility implements Callable<Integer> {
 			fileProcessorService.processFiles(files, configAggregation, reporter);
 		}
 
-		LOG.info("Complete.");
+		LOG.info(" Complete.");
 
 		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");

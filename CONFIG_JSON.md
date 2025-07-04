@@ -149,7 +149,7 @@ This has been addressed with the `structure` object within the configuration:
 
 As can be seen above, if the `enableFileJourney` flag is set to `true` the following happens during processing:
 1) The directory specified in the `in` attribute is scanned for files with extensions which match one of the `extensions` also specified.
-2) Upon finding a file, the file is renamed with a prefix of teh date and time e.g. `20250705010203_<filename>`.
+2) Upon finding a file, the file is renamed with a prefix of the date and time e.g. `20250705010203_<filename>`.
 3) The file `20250705010203_<filename>` is then moved to the diectory specified in the `stage` attribute
 so to clean the `in` directory.
 4) The file is then attempted to be imported / aggregated.

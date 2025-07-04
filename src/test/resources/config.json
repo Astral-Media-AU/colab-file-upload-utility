@@ -1,6 +1,6 @@
 {
   "tenant": {
-    "url": "https://partner215.api.identitynow.com",
+    "url": "https://\u003cexample\u003e.api.identitynow.com",
     "clientId": "env",
     "clientSecret": "env"
   },
@@ -32,6 +32,6 @@
       }
     }
   ],
-  "ks": "Ep924opc0r4ZjZCCLk8tzw\u003d\u003d",
-  "iv": "Q6KEAaihs1oNAjqP"
+  "ks": "/bbBHTipkkeHaEYxHfeErA\u003d\u003d",
+  "iv": "HabdXoZRZif7U7c/"
 }
