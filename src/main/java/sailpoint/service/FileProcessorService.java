@@ -287,7 +287,7 @@ public class FileProcessorService {
 
 			if (this.sourceReferenceMap.containsKey(fileSourceId)) {
 
-				LOG.debug("\tFile [" + file.getName() + "]: Successfully resolved old source ID reference ["
+				LOG.info("\tFile [" + file.getName() + "]: Successfully resolved old source ID reference ["
 						+ fileSourceId + "] to new source ID reference [" + sourceReferenceMap.get(fileSourceId) + "]");
 				return sourceReferenceMap.get(fileSourceId);
 

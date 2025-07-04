@@ -1,5 +1,4 @@
 {
-  "verbose": true,
   "tenant": {
     "url": "https://partner215.api.identitynow.com",
     "clientId": "env",
@@ -26,7 +25,7 @@
       ],
       "enableFileJourney": true,
       "structure": {
-        "in": "/data/projects/sailpoint/",
+        "in": "/data/projects/sailpoint/in",
         "stage": "/data/projects/sailpoint/stage",
         "archive": "/data/projects/sailpoint/archive",
         "error": "/data/projects/sailpoint/error"

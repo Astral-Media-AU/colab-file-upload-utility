@@ -4,19 +4,11 @@ package sailpoint.object.config;
  * Class to represent the config JSON.
  */
 public class Config {
-    private boolean verbose;
     private ConfigTenant tenant;
     private ConfigProxy proxy;
     private ConfigAggregation[] aggregations;
     private String ks;
     private String iv;
-    
-    public boolean isVerbose() {
-        return verbose;
-    }
-    public void setVerbose(boolean verbose) {
-        this.verbose = verbose;
-    }
 
     public ConfigTenant getTenant() {
         return tenant;

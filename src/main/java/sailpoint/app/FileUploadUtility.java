@@ -39,7 +39,7 @@ public class FileUploadUtility implements Callable<Integer> {
 	 * Metadata about the File Upload Utility
 	 */
 	public static final String ABOUT_DATE = "2025-06-28 03:15 AWST";
-	public static final String ABOUT_VERSION = "4.1.1-RC";
+	public static final String ABOUT_VERSION = "4.1.1";
 	public static final String ABOUT_LINK = "https://developer.sailpoint.com/discuss/t/file-upload-utility/18181";
 
 	/**
@@ -52,11 +52,11 @@ public class FileUploadUtility implements Callable<Integer> {
 	@Option(names = { "-u", "--url" }, description = "SailPoint API Gateway (e.g. https://tenant.api.identitynow.com)")
 	private String url = "";
 
-	@Option(names = { "-i", "--clientId" }, description = "SailPoint Client ID (PAT)")
+	@Option(names = { "-i", "--clientId" }, description = "SailPoint Client ID (PAT) or 'env' if using SAIL_CLIENT_ID environment variable")
 	private String clientId = "";
 
 	@Option(names = { "-s",
-			"--clientSecret" }, description = "SailPoint Client Secret (PAT)", arity = "0..1", interactive = true)
+			"--clientSecret" }, description = "SailPoint Client Secret (PAT) or 'env' if using SAIL_CLIENT_SECRET environment variable", arity = "0..1", interactive = true)
 	private String clientSecret = "";
 
 	@Option(names = { "-f", "--file" }, description = "File or directories for bulk aggregation.")
@@ -82,8 +82,8 @@ public class FileUploadUtility implements Callable<Integer> {
 			"--extension" }, description = "File extensions to search (for directories only).  Default: csv")
 	private List<String> fileExtensions = Arrays.asList("csv");
 
-	@Option(names = { "-v", "--verbose" }, description = "Verbose logging. Default: false")
-	private boolean verbose = false;
+	// @Option(names = { "-v", "--verbose" }, description = "Verbose logging. Default: false")
+	// private boolean verbose = false;
 
 	@Option(names = { "-H", "--proxyHost" }, description = "Proxy Host")
 	private String proxyHost;
@@ -263,7 +263,7 @@ public class FileUploadUtility implements Callable<Integer> {
 		LOG.info(String.format("%1$-20s %2$-30s ", " URL:", url));
 		LOG.info(String.format("%1$-20s %2$-30s ", " Client ID:", clientId));
 //		logger.info( String.format("%1$-20s %2$-30s ", " Files:", StringUtils.join( files, ", \n" ) ) );
-		LOG.info(String.format("%1$-20s %2$-30s ", " Verbose:", verbose));
+		// LOG.info(String.format("%1$-20s %2$-30s ", " Verbose:", verbose));
 		LOG.info(
 				"------------------------------------------------------------------------------------------------------------");
 

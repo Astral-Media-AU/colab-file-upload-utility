@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'sailpoint.cloud'
-version '4.0.0'
+version '4.1.1'
 
 repositories {
     mavenCentral()
@@ -33,7 +33,7 @@ tasks.withType(JavaCompile) {
 
 jar {
     manifest {
-        attributes 'Main-Class': 'sailpoint.utils.FileUploadUtility'
+        attributes 'Main-Class': 'sailpoint.app.FileUploadUtility'
     }
 }
 
@@ -62,5 +62,5 @@ test {
 }
 
 application {
-    mainClass = 'sailpoint.utils.FileUploadUtility'
+    mainClass = 'sailpoint.app.FileUploadUtility'
 }
